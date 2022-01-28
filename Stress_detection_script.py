@@ -527,7 +527,7 @@ def Extract_Heart_Rate_Features():
         fig.savefig('./Plots/Heart_Rate_figure.png')
         
 def stack_plot_results():
-    print( '\n', '**************************** Preparing combined plots ********************************', '\n')
+    
     fig, axs = plt.subplots(nrows=5, sharex=True, subplot_kw=dict(frameon=False),figsize = (30,15) ) # frameon=False removes frames
     axs[0].grid()
     axs[1].grid()
