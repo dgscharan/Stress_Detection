@@ -1,18 +1,17 @@
-import plotly
+
 import os
-import sys
-import time
-import argparse
 import numpy as np
 import pandas as pd
 import zipfile
 import fnmatch
+import datetime
+import logging
 import flirt.reader.empatica
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import cvxopt as cv
-import cvxopt.solvers
 from neurokit2 import eda_phasic
+import multiprocessing
 
 # rootPath = r"./"
 # pattern = '*.zip'
@@ -130,6 +129,22 @@ def Extract_HRV_Information():
         frames = (starting_timestamp_df, ending_timestamp_df)
         hrv_events_df = pd.concat(frames,  axis=1)
         hrv_events_df.columns = ['Starting Timestamp', 'Ending Timestamp']
+        hrv_events_df = hrv_events_df.loc[desired_time_index, :]
+        
+        # logic to combine smaller intervals of 10 mins 
+        try:
+            for i in range(len(hrv_events_df['Starting Timestamp'])):
+                # print(hrv_events_df['Starting Timestamp'][i+1])
+                for j in range(len(hrv_events_df['Ending Timestamp'])):
+                    if ((hrv_events_df['Starting Timestamp'][i+1] - hrv_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
+                        (hrv_events_df['Starting Timestamp'][i+1] - hrv_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
+                        hrv_events_df['Starting Timestamp'][i+1] = hrv_events_df['Ending Timestamp'][i]
+                        # print(hrv_events_df['Starting Timestamp'][i+1], '\n', hrv_events_df['Ending Timestamp'][i])    
+                    else:
+                        pass     
+        except KeyError as error:
+            logging.info('range error in delta time adjustments')
+        
         fig, ax = plt.subplots(figsize=(20, 6))
         ax.plot(hrv_features['datetime'],
                 hrv_features['MAG_K500'], color='red')
@@ -165,10 +180,10 @@ def Extract_ACC_Infromation():
     print("Average Magnitude of the Acc Data : ", mean_acc_magnitude)
 
     starting_timestamp = process.Starting_timeStamp(acc_df['MAG_K500'], acc_df['datetime'],
-                                                    process.deviation_above_mean(1, mean_acc_magnitude, std_acc_magnitude))
+                                                    process.deviation_above_mean(0.20, mean_acc_magnitude, std_acc_magnitude))
 
     ending_timestamp = process.Ending_timeStamp(acc_df['MAG_K500'], acc_df['datetime'],
-                                                process.deviation_above_mean(1, mean_acc_magnitude, std_acc_magnitude))
+                                                process.deviation_above_mean(0.20, mean_acc_magnitude, std_acc_magnitude))
 
     if len(starting_timestamp) < 1:
         fig, ax2 = plt.subplots(figsize=(30, 10))
@@ -190,7 +205,7 @@ def Extract_ACC_Infromation():
             time_delta_minutes.append(i.total_seconds()/60)
 
         for i in range(len(time_delta_minutes)):
-            if time_delta_minutes[i] > 3.00:
+            if time_delta_minutes[i] > 2.00:
                 desired_time_index.append(i)
 
         starting_timestamp_df = pd.DataFrame(starting_timestamp)
@@ -200,6 +215,22 @@ def Extract_ACC_Infromation():
         acc_events_df.columns = ['Starting Timestamp', 'Ending Timestamp']
         acc_events_df = acc_events_df.loc[desired_time_index, :]
         # acc_events_df.to_csv(rootPath+"timestamp_" +dir+ "_ACC.csv")
+        
+        try:
+            for i in range(len(acc_events_df['Starting Timestamp'])):
+                # print(acc_events_df['Starting Timestamp'][i+1])
+                for j in range(len(acc_events_df['Ending Timestamp'])):
+                    if ((acc_events_df['Starting Timestamp'][i+1] - acc_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
+                        (acc_events_df['Starting Timestamp'][i+1] - acc_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
+                        acc_events_df['Starting Timestamp'][i+1] = acc_events_df['Ending Timestamp'][i]
+                        # print(acc_events_df['Starting Timestamp'][i+1], '\n', acc_events_df['Ending Timestamp'][i])    
+                    else:
+                        pass     
+        except KeyError as error:
+            logging.info('range error in delta time adjustments')
+        
+        acc_events_df
+        
         fig, ax2 = plt.subplots(figsize=(30, 10))
         ax2.plot(acc_df['datetime'], acc_df['MAG_K500'], color='red')
         for d in acc_events_df.index:
@@ -267,7 +298,21 @@ def Extract_GSR_Phasic_Information():
         eda_phasic_events_df.columns = [
             'Starting Timestamp', 'Ending Timestamp']
         eda_phasic_events_df = eda_phasic_events_df.loc[desired_time_index, :]
-        eda_phasic_events_df.to_csv(rootPath+"timestamp_" + dir + "_EDA.csv")
+        # eda_phasic_events_df.to_csv(rootPath+"timestamp_" + dir + "_EDA.csv")
+        
+        try:
+            for i in range(len(eda_phasic_events_df['Starting Timestamp'])):
+                # print(eda_phasic_events_df['Starting Timestamp'][i+1])
+                for j in range(len(eda_phasic_events_df['Ending Timestamp'])):
+                    if ((eda_phasic_events_df['Starting Timestamp'][i+1] - eda_phasic_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
+                        (eda_phasic_events_df['Starting Timestamp'][i+1] - eda_phasic_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
+                        eda_phasic_events_df['Starting Timestamp'][i+1] = eda_phasic_events_df['Ending Timestamp'][i]
+                        # print(eda_phasic_events_df['Starting Timestamp'][i+1], '\n', eda_phasic_events_df['Ending Timestamp'][i])    
+                    else:
+                        pass     
+        except KeyError as error:
+            logging.info('range error in delta time adjustments')
+        
         fig, ax3 = plt.subplots(figsize=(30, 10))
         ax3.plot(eda_phasic_df['datetime'],
                  eda_phasic_df['MAG_K500'], color='red')
@@ -337,6 +382,20 @@ def Extract_GSR_Tonic_Information():
             'Starting Timestamp', 'Ending Timestamp']
         eda_tonic_events_df = eda_tonic_events_df.loc[desired_time_index, :]
         # eda_tonic_events_df.to_csv(rootPath+"timestamp_" +dir+ "_EDA.csv")
+        
+        try:
+            for i in range(len(eda_tonic_events_df['Starting Timestamp'])):
+                # print(eda_tonic_events_df['Starting Timestamp'][i+1])
+                for j in range(len(eda_tonic_events_df['Ending Timestamp'])):
+                    if ((eda_tonic_events_df['Starting Timestamp'][i+1] - eda_tonic_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
+                        (eda_tonic_events_df['Starting Timestamp'][i+1] - eda_tonic_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
+                        eda_tonic_events_df['Starting Timestamp'][i+1] = eda_tonic_events_df['Ending Timestamp'][i]
+                        # print(eda_tonic_events_df['Starting Timestamp'][i+1], '\n', eda_tonic_events_df['Ending Timestamp'][i])    
+                    else:
+                        pass     
+        except KeyError as error:
+            logging.info('range error in delta time adjustments')
+        
         fig, ax4 = plt.subplots(figsize=(30, 10))
         ax4.plot(eda_tonic_df['datetime'],
                  eda_tonic_df['MAG_K500'], color='red')
@@ -396,6 +455,20 @@ def Extract_Heart_Rate_Features():
         hr_events_df.columns = ['Starting Timestamp', 'Ending Timestamp']
         hr_events_df = hr_events_df.loc[desired_time_index, :]
         # hr_events_df.to_csv(rootPath+"timestamp_" +dir+ "_EDA.csv")
+        
+        try:
+            for i in range(len(hr_events_df['Starting Timestamp'])):
+                # print(hr_events_df['Starting Timestamp'][i+1])
+                for j in range(len(hr_events_df['Ending Timestamp'])):
+                    if ((hr_events_df['Starting Timestamp'][i+1] - hr_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
+                        (hr_events_df['Starting Timestamp'][i+1] - hr_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
+                        hr_events_df['Starting Timestamp'][i+1] = hr_events_df['Ending Timestamp'][i]
+                        # print(hr_events_df['Starting Timestamp'][i+1], '\n', hr_events_df['Ending Timestamp'][i])    
+                    else:
+                        pass     
+        except KeyError as error:
+            logging.info('range error in delta time adjustments') 
+        
         fig, ax4 = plt.subplots(figsize=(30, 10))
         ax4.plot(hr_df['datetime'], hr_df['MAG_K500'], color='red')
         for d in hr_events_df.index:
@@ -407,6 +480,190 @@ def Extract_Heart_Rate_Features():
 
 
 def stack_plot_results():
+    
+    # ema_df = pd.read_csv('L:/C O D E/UMBC VR Project/Stress_Detection/EMA_Survey/ema.csv')
+    # ema_df = ema_df.iloc[2: , :]
+    # ema_df.reset_index(inplace=True)
+
+    # date_range = []
+
+    # for i in range(len(ema_df)):
+    #     date_range.append(('Survey Start Time = ' + ema_df.StartDate[i], 'Survey End Time = ' + ema_df.EndDate[i], 'Break = ' + ema_df.Break[i],
+    #                     'Rushed = ' + ema_df.Rushed[i], 'Confront_Authority = '+ ema_df.Confront_authority[i],
+    #             'Rude_Family = ' + ema_df.Rude_family[i], 'Gen_Disrespect= ' + ema_df.gen_disrespect[i],
+    #             'COVID_concern= ' + ema_df.COVID_concern[i], 'Discomfort= ' + ema_df.Discomfort[i],
+    #             'Lack_support= ' + ema_df.Lack_support[i],   'Team_value= ' + ema_df.Team_value[i],
+    #             'Demands= ' + ema_df.Demands[i], 'Death= ' + ema_df.Death[i], 
+    #             'Other_work-stress= ' + ema_df['Other_work-stress'][i],  'Other_non-work-stress= ' + ema_df['Other_non-work-stress'][i] ))
+             
+    # Print_start_date_range = str(date_range[0]).replace("'", "")
+    # Print_end_date_range = str(date_range[1]).replace("'", "")  
+
+    # fig = plt.figure(figsize=(70,10))
+    # fig, ax2 = plt.subplots(figsize=(50,15)) 
+    # ax2 = fig.add_subplot(121)
+    
+            
+############################################################   EMA Survey Plot ################################################################
+    ema_df = pd.read_csv('./EMA_Survey/ema.csv')
+    ema_df = ema_df.iloc[2: , :]
+    ema_df.reset_index(inplace=True)
+    forenoon_ema_df = ema_df.iloc[[0], :]
+    afternoon_ema_df = ema_df.iloc[[1], :]
+
+    forenoon_data = []
+    forenoon_data.append('Start Time = ' + str(forenoon_ema_df['StartDate'].values))
+    forenoon_data.append('End Time = '+  str(forenoon_ema_df['EndDate'].values))
+
+    if (int(forenoon_ema_df['Break'].values)) > 0 and (int(forenoon_ema_df['Break'].values)) < 8:
+        forenoon_data.append('Break = ' + (str(forenoon_ema_df['Break'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Rushed'].values)) > 0 and (int(forenoon_ema_df['Rushed'].values)) < 8:
+        forenoon_data.append('Rushed = ' + (str(forenoon_ema_df['Rushed'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Confront_authority'].values)) > 0 and (int(forenoon_ema_df['Confront_authority'].values)) < 8:
+        forenoon_data.append('Confront_authority = ' + (str(forenoon_ema_df['Confront_authority'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Rude_family'].values)) > 0 and (int(forenoon_ema_df['Rude_family'].values)) < 8:
+        forenoon_data.append('Rude_family = ' + (str(forenoon_ema_df['Rude_family'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['gen_disrespect'].values)) > 0 and (int(forenoon_ema_df['gen_disrespect'].values)) < 8:
+        forenoon_data.append('gen_disrespect = ' + (str(forenoon_ema_df['gen_disrespect'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['COVID_concern'].values)) > 0 and (int(forenoon_ema_df['COVID_concern'].values)) < 8:
+        forenoon_data.append('COVID_concern = ' + (str(forenoon_ema_df['COVID_concern'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Discomfort'].values)) > 0 and (int(forenoon_ema_df['Discomfort'].values)) < 8:
+        forenoon_data.append('Discomfort = ' + (str(forenoon_ema_df['Discomfort'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Lack_support'].values)) > 0 and (int(forenoon_ema_df['Lack_support'].values)) < 8:
+        forenoon_data.append('Lack_support = ' + (str(forenoon_ema_df['Lack_support'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Team_value'].values)) > 0 and (int(forenoon_ema_df['Team_value'].values)) < 8:
+        forenoon_data.append('Team_value = ' + (str(forenoon_ema_df['Team_value'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Demands'].values)) > 0 and (int(forenoon_ema_df['Demands'].values)) < 8:
+        forenoon_data.append('Demands = ' + (str(forenoon_ema_df['Demands'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Death'].values)) > 0 and (int(forenoon_ema_df['Death'].values)) < 8:
+        forenoon_data.append('Death = ' + (str(forenoon_ema_df['Death'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Other_work-stress'].values)) > 0 and (int(forenoon_ema_df['Other_work-stress'].values)) < 8:
+        forenoon_data.append('Other_work-stress = ' + (str(forenoon_ema_df['Other_work-stress'].values)))
+    else:
+        pass
+
+    if (int(forenoon_ema_df['Other_non-work-stress'].values)) > 0 and (int(forenoon_ema_df['Other_non-work-stress'].values)) < 8:
+        forenoon_data.append('Other_non-work-stress = ' + (str(forenoon_ema_df['Other_non-work-stress'].values)))
+    else:
+        pass
+
+    afternoon_data = []
+    afternoon_data.append('Start Time = ' + str(afternoon_ema_df['StartDate'].values))
+    afternoon_data.append('End Time = '+  str(afternoon_ema_df['EndDate'].values))
+
+    if (int(afternoon_ema_df['Break'].values)) > 0 and (int(afternoon_ema_df['Break'].values)) < 8:
+        afternoon_data.append('Break = ' + (str(afternoon_ema_df['Break'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Rushed'].values)) > 0 and (int(afternoon_ema_df['Rushed'].values)) < 8:
+        afternoon_data.append('Rushed = ' + (str(afternoon_ema_df['Rushed'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Confront_authority'].values)) > 0 and (int(afternoon_ema_df['Confront_authority'].values)) < 8:
+        afternoon_data.append('Confront_authority = ' + (str(afternoon_ema_df['Confront_authority'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Rude_family'].values)) > 0 and (int(afternoon_ema_df['Rude_family'].values)) < 8:
+        afternoon_data.append('Rude_family = ' + (str(afternoon_ema_df['Rude_family'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['gen_disrespect'].values)) > 0 and (int(afternoon_ema_df['gen_disrespect'].values)) < 8:
+        afternoon_data.append('gen_disrespect = ' + (str(afternoon_ema_df['gen_disrespect'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['COVID_concern'].values)) > 0 and (int(afternoon_ema_df['COVID_concern'].values)) < 8:
+        afternoon_data.append('COVID_concern = ' + (str(afternoon_ema_df['COVID_concern'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Discomfort'].values)) > 0 and (int(afternoon_ema_df['Discomfort'].values)) < 8:
+        afternoon_data.append('Discomfort = ' + (str(afternoon_ema_df['Discomfort'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Lack_support'].values)) > 0 and (int(afternoon_ema_df['Lack_support'].values)) < 8:
+        afternoon_data.append('Lack_support = ' + (str(afternoon_ema_df['Lack_support'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Team_value'].values)) > 0 and (int(afternoon_ema_df['Team_value'].values)) < 8:
+        afternoon_data.append('Team_value = ' + (str(afternoon_ema_df['Team_value'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Demands'].values)) > 0 and (int(afternoon_ema_df['Demands'].values)) < 8:
+        afternoon_data.append('Demands = ' + (str(afternoon_ema_df['Demands'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Death'].values)) > 0 and (int(afternoon_ema_df['Death'].values)) < 8:
+        afternoon_data.append('Death = ' + (str(afternoon_ema_df['Death'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Other_work-stress'].values)) > 0 and (int(afternoon_ema_df['Other_work-stress'].values)) < 8:
+        afternoon_data.append('Other_work-stress = ' + (str(afternoon_ema_df['Other_work-stress'].values)))
+    else:
+        pass
+
+    if (int(afternoon_ema_df['Other_non-work-stress'].values)) > 0 and (int(afternoon_ema_df['Other_non-work-stress'].values)) < 8:
+        afternoon_data.append('Other_non-work-stress = ' + (str(afternoon_ema_df['Other_non-work-stress'].values)))
+    else:
+        pass
+
+        
+    rep_lst = ['[', ']', '"', "'"]
+    for i in rep_lst:
+        if i in str(afternoon_data):
+            afternoon_data = str(afternoon_data).replace(i, '')
+            
+    rep_lst = ['[', ']', '"', "'"]
+    for i in rep_lst:
+        if i in str(forenoon_data):
+            forenoon_data = str(forenoon_data).replace(i, '')
+
+########################################################################################################################################
+
+    
+    
     print('\n', '******************************* Preparing for combined chart ****************************************', '\n')
     fig, axs = plt.subplots(nrows=5, sharex=True, subplot_kw=dict(
         frameon=False), figsize=(30, 15))  # frameon=False removes frames
@@ -415,44 +672,74 @@ def stack_plot_results():
     axs[2].grid()
     axs[3].grid()
     axs[4].grid()
+    
+    plt.figtext(0.1, .95, forenoon_data, ha="left", fontsize=10, bbox={"facecolor":"orange", "alpha":2.0, "pad":10}, wrap= True)
+    plt.figtext(0.1, .90, afternoon_data, ha="left", fontsize=10, bbox={"facecolor":"pink", "alpha":2.0, "pad":10},wrap = True)
+    
 
     axs[0].plot(acc_df['datetime'], acc_df['MAG_K500'],
-                color='red', label="Acc Magnitude")
+                color='b', label="Acc Magnitude")
     axs[1].plot(hr_df['datetime'], hr_df['MAG_K500'],
-                color='red', label="Heart rate")
+                color='m', label="Heart rate")
     axs[2].plot(hrv_features['datetime'], hrv_features['MAG_K500'],
-                color='red',  label="HR-Variability")
+                color='g',  label="HR-Variability")
     axs[3].plot(eda_phasic_df['datetime'], eda_phasic_df['MAG_K500'],
-                color='red', label="EDA-Phasic")
+                color='r', label="EDA-Phasic")
     axs[4].plot(eda_tonic_df['datetime'], eda_tonic_df['MAG_K500'],
-                color='red', label="EDA-Tonic")
+                color='c', label="EDA-Tonic")
 
     for d in tqdm(hrv_events_df.index):
         axs[0].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=0.5)
+                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
         axs[1].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=0.5)
+                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
         axs[2].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=0.5)
+                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
         axs[3].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=0.5)
+                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
         axs[4].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=0.5)
+                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
 
-    # for d in acc_events_df.index:
-    #     axs[1].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="b", edgecolor="none", alpha=0.5)
+    for d in tqdm(acc_events_df.index):
+        axs[0].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[1].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[2].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[3].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[4].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        
 
-    # for d in eda_phasic_events_df.index:
-    #     axs[2].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="b", edgecolor="none", alpha=0.5)
+    for d in tqdm(eda_phasic_events_df.index):
+        axs[0].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[1].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[2].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[3].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[4].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
 
-    # for d in eda_tonic_events_df.index:
-    #     axs[3].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="b", edgecolor="none", alpha=0.5)
+    for d in tqdm(eda_tonic_events_df.index):
+        axs[0].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[1].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[2].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[3].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[4].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
 
-    # for d in hr_events_df.index:
-    #     axs[4].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="b", edgecolor="none", alpha=0.5)
+    for d in tqdm(hr_events_df.index):
+        axs[0].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[1].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[2].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[3].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[4].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+
+
+#gbrcm 
 
     for i in range(5):
         axs[i].legend()
+        # axs.xaxis.set_major_locator(mdates.MinuteLocator(interval=20))   #to get a tick every 15 minutes
+        # axs.xaxis.set_major_formatter(mdates.DateFormatter('%I:%M %p'))
+        # plt.gcf().autofmt_xdate()
+        
+    import matplotlib.dates as mdates
+    
     fig.savefig('./Stacked_charts/Stressful_Regions.png')
     # ("./Metadata/"+ dir+"_HRV.csv")
 
@@ -463,3 +750,36 @@ Extract_GSR_Phasic_Information()
 Extract_GSR_Tonic_Information()
 Extract_Heart_Rate_Features()
 stack_plot_results()
+
+
+# if __name__ == "__main__":
+#     # creating processes
+#     p1 = multiprocessing.Process(Extract_HRV_Information())
+#     p2 = multiprocessing.Process(Extract_ACC_Infromation())
+#     p3 = multiprocessing.Process(Extract_GSR_Phasic_Information())
+#     p4 = multiprocessing.Process(Extract_GSR_Tonic_Information)
+#     p5 = multiprocessing.Process(Extract_Heart_Rate_Features())
+#     p6 = multiprocessing.Process(stack_plot_results)
+  
+#     # starting process 1
+#     p1.start()
+#     # starting process 2
+#     p2.start()
+#     p3.start()
+#     p4.start()
+#     p5.start()
+#     p6.start()
+  
+#     # wait until process 1 is finished
+#     p1.join()
+#     # wait until process 2 is finished
+#     p2.join()
+#     p3.join()
+#     p4.join()
+#     p5.join()
+#     p6.join()
+
+
+  
+#     # both processes finished
+#     print("Done!")
