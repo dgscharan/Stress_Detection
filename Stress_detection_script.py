@@ -1,4 +1,13 @@
 
+#!/usr/bin/env python
+# -*-coding:utf-8 -*-
+'''
+@File    :   Stress_detection_script.py
+@Time    :   2022/03/17 09:45:59
+@Author  :   Sri Charan 
+@Contact :   dgscharan@gmail.com
+'''
+
 import os
 import numpy as np
 import pandas as pd
@@ -738,7 +747,11 @@ def stack_plot_results():
         # axs.xaxis.set_major_formatter(mdates.DateFormatter('%I:%M %p'))
         # plt.gcf().autofmt_xdate()
         
+
     import matplotlib.dates as mdates
+    axs[4].xaxis.set_major_locator(mdates.MinuteLocator(interval=20))   #to get a tick every 15 minutes
+    axs[4].xaxis.set_major_formatter(mdates.DateFormatter('%I:%M %p'))
+    plt.gcf().autofmt_xdate()
     
     fig.savefig('./Stacked_charts/Stressful_Regions.png')
     # ("./Metadata/"+ dir+"_HRV.csv")
