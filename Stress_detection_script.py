@@ -9,18 +9,18 @@
 '''
 
 import os
+import logging
+import plotly.express as px
 import numpy as np
 import pandas as pd
 import zipfile
 import fnmatch
-import datetime
-import logging
 import flirt.reader.empatica
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from datetime import datetime, timedelta
 import cvxopt as cv
 from neurokit2 import eda_phasic
-import multiprocessing
 
 # rootPath = r"./"
 # pattern = '*.zip'
@@ -138,22 +138,9 @@ def Extract_HRV_Information():
         frames = (starting_timestamp_df, ending_timestamp_df)
         hrv_events_df = pd.concat(frames,  axis=1)
         hrv_events_df.columns = ['Starting Timestamp', 'Ending Timestamp']
-        hrv_events_df = hrv_events_df.loc[desired_time_index, :]
-        
-        # logic to combine smaller intervals of 10 mins 
-        try:
-            for i in range(len(hrv_events_df['Starting Timestamp'])):
-                # print(hrv_events_df['Starting Timestamp'][i+1])
-                for j in range(len(hrv_events_df['Ending Timestamp'])):
-                    if ((hrv_events_df['Starting Timestamp'][i+1] - hrv_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
-                        (hrv_events_df['Starting Timestamp'][i+1] - hrv_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
-                        hrv_events_df['Starting Timestamp'][i+1] = hrv_events_df['Ending Timestamp'][i]
-                        # print(hrv_events_df['Starting Timestamp'][i+1], '\n', hrv_events_df['Ending Timestamp'][i])    
-                    else:
-                        pass     
-        except KeyError as error:
-            logging.info('range error in delta time adjustments')
-        
+        hrv_events_df['Starting Timestamp'] = hrv_events_df['Starting Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        hrv_events_df['Ending Timestamp'] = hrv_events_df['Ending Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        hrv_events_df = hrv_events_df.loc[desired_time_index, :]        
         fig, ax = plt.subplots(figsize=(20, 6))
         ax.plot(hrv_features['datetime'],
                 hrv_features['MAG_K500'], color='red')
@@ -222,24 +209,10 @@ def Extract_ACC_Infromation():
         frames = (starting_timestamp_df, ending_timestamp_df)
         acc_events_df = pd.concat(frames,  axis=1)
         acc_events_df.columns = ['Starting Timestamp', 'Ending Timestamp']
+        acc_events_df['Starting Timestamp'] = acc_events_df['Starting Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        acc_events_df['Ending Timestamp'] = acc_events_df['Ending Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
         acc_events_df = acc_events_df.loc[desired_time_index, :]
-        # acc_events_df.to_csv(rootPath+"timestamp_" +dir+ "_ACC.csv")
-        
-        try:
-            for i in range(len(acc_events_df['Starting Timestamp'])):
-                # print(acc_events_df['Starting Timestamp'][i+1])
-                for j in range(len(acc_events_df['Ending Timestamp'])):
-                    if ((acc_events_df['Starting Timestamp'][i+1] - acc_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
-                        (acc_events_df['Starting Timestamp'][i+1] - acc_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
-                        acc_events_df['Starting Timestamp'][i+1] = acc_events_df['Ending Timestamp'][i]
-                        # print(acc_events_df['Starting Timestamp'][i+1], '\n', acc_events_df['Ending Timestamp'][i])    
-                    else:
-                        pass     
-        except KeyError as error:
-            logging.info('range error in delta time adjustments')
-        
-        acc_events_df
-        
+        # acc_events_df.to_csv(rootPath+"timestamp_" +dir+ "_ACC.csv")   
         fig, ax2 = plt.subplots(figsize=(30, 10))
         ax2.plot(acc_df['datetime'], acc_df['MAG_K500'], color='red')
         for d in acc_events_df.index:
@@ -306,22 +279,10 @@ def Extract_GSR_Phasic_Information():
         eda_phasic_events_df = pd.concat(frames,  axis=1)
         eda_phasic_events_df.columns = [
             'Starting Timestamp', 'Ending Timestamp']
+        eda_phasic_events_df['Starting Timestamp'] = eda_phasic_events_df['Starting Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        eda_phasic_events_df['Ending Timestamp'] = eda_phasic_events_df['Ending Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
         eda_phasic_events_df = eda_phasic_events_df.loc[desired_time_index, :]
         # eda_phasic_events_df.to_csv(rootPath+"timestamp_" + dir + "_EDA.csv")
-        
-        try:
-            for i in range(len(eda_phasic_events_df['Starting Timestamp'])):
-                # print(eda_phasic_events_df['Starting Timestamp'][i+1])
-                for j in range(len(eda_phasic_events_df['Ending Timestamp'])):
-                    if ((eda_phasic_events_df['Starting Timestamp'][i+1] - eda_phasic_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
-                        (eda_phasic_events_df['Starting Timestamp'][i+1] - eda_phasic_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
-                        eda_phasic_events_df['Starting Timestamp'][i+1] = eda_phasic_events_df['Ending Timestamp'][i]
-                        # print(eda_phasic_events_df['Starting Timestamp'][i+1], '\n', eda_phasic_events_df['Ending Timestamp'][i])    
-                    else:
-                        pass     
-        except KeyError as error:
-            logging.info('range error in delta time adjustments')
-        
         fig, ax3 = plt.subplots(figsize=(30, 10))
         ax3.plot(eda_phasic_df['datetime'],
                  eda_phasic_df['MAG_K500'], color='red')
@@ -389,21 +350,10 @@ def Extract_GSR_Tonic_Information():
         eda_tonic_events_df = pd.concat(frames,  axis=1)
         eda_tonic_events_df.columns = [
             'Starting Timestamp', 'Ending Timestamp']
+        eda_tonic_events_df['Starting Timestamp'] = eda_tonic_events_df['Starting Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        eda_tonic_events_df['Ending Timestamp'] = eda_tonic_events_df['Ending Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
         eda_tonic_events_df = eda_tonic_events_df.loc[desired_time_index, :]
         # eda_tonic_events_df.to_csv(rootPath+"timestamp_" +dir+ "_EDA.csv")
-        
-        try:
-            for i in range(len(eda_tonic_events_df['Starting Timestamp'])):
-                # print(eda_tonic_events_df['Starting Timestamp'][i+1])
-                for j in range(len(eda_tonic_events_df['Ending Timestamp'])):
-                    if ((eda_tonic_events_df['Starting Timestamp'][i+1] - eda_tonic_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
-                        (eda_tonic_events_df['Starting Timestamp'][i+1] - eda_tonic_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
-                        eda_tonic_events_df['Starting Timestamp'][i+1] = eda_tonic_events_df['Ending Timestamp'][i]
-                        # print(eda_tonic_events_df['Starting Timestamp'][i+1], '\n', eda_tonic_events_df['Ending Timestamp'][i])    
-                    else:
-                        pass     
-        except KeyError as error:
-            logging.info('range error in delta time adjustments')
         
         fig, ax4 = plt.subplots(figsize=(30, 10))
         ax4.plot(eda_tonic_df['datetime'],
@@ -462,22 +412,11 @@ def Extract_Heart_Rate_Features():
         frames = (starting_timestamp_df, ending_timestamp_df)
         hr_events_df = pd.concat(frames,  axis=1)
         hr_events_df.columns = ['Starting Timestamp', 'Ending Timestamp']
+        hr_events_df['Starting Timestamp'] = hr_events_df['Starting Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
+        hr_events_df['Ending Timestamp'] = hr_events_df['Ending Timestamp'].dt.strftime("%Y-%m-%d %H:%M:%S")
         hr_events_df = hr_events_df.loc[desired_time_index, :]
         # hr_events_df.to_csv(rootPath+"timestamp_" +dir+ "_EDA.csv")
-        
-        try:
-            for i in range(len(hr_events_df['Starting Timestamp'])):
-                # print(hr_events_df['Starting Timestamp'][i+1])
-                for j in range(len(hr_events_df['Ending Timestamp'])):
-                    if ((hr_events_df['Starting Timestamp'][i+1] - hr_events_df['Ending Timestamp'][i]) < datetime.timedelta(minutes=10) and 
-                        (hr_events_df['Starting Timestamp'][i+1] - hr_events_df['Ending Timestamp'][i]) > datetime.timedelta(minutes=0, seconds=0)):
-                        hr_events_df['Starting Timestamp'][i+1] = hr_events_df['Ending Timestamp'][i]
-                        # print(hr_events_df['Starting Timestamp'][i+1], '\n', hr_events_df['Ending Timestamp'][i])    
-                    else:
-                        pass     
-        except KeyError as error:
-            logging.info('range error in delta time adjustments') 
-        
+   
         fig, ax4 = plt.subplots(figsize=(30, 10))
         ax4.plot(hr_df['datetime'], hr_df['MAG_K500'], color='red')
         for d in hr_events_df.index:
@@ -486,34 +425,63 @@ def Extract_Heart_Rate_Features():
         ax4.relim()
         ax4.autoscale_view()
         fig.savefig('./Plots/Heart_Rate_figure.png')
+        
+        
+def handle_overlapping_timestamps():
+    
+    global concatnated_frame, merged_smaller_events
+    
+    hrv_events_df_copy = hrv_events_df.copy()
+    hr_events_df_copy = hr_events_df.copy()
+    acc_events_df_copy = acc_events_df.copy()
+    eda_phasic_events_df_copy = eda_phasic_events_df.copy()
+    eda_tonic_events_df_copy = eda_tonic_events_df.copy()
+    
+    concatnated_frame = pd.concat([hrv_events_df_copy, hr_events_df_copy, acc_events_df_copy, eda_phasic_events_df_copy, eda_tonic_events_df_copy])
+    concatnated_frame = pd.DataFrame(concatnated_frame)
+    concatnated_frame["Starting Timestamp"] = concatnated_frame["Starting Timestamp"].apply(lambda x: pd.Timestamp(x).timestamp())
+    concatnated_frame["Ending Timestamp"] = concatnated_frame["Ending Timestamp"].apply(lambda x: pd.Timestamp(x).timestamp())
+    concatnated_frame = concatnated_frame.sort_values(by=['Starting Timestamp', 'Ending Timestamp']).reset_index(drop = True)
+    concatnated_frame['Starting Timestamp'] = concatnated_frame["Starting Timestamp"].apply(lambda x: pd.to_datetime(x, unit='s'))
+    concatnated_frame['Ending Timestamp'] = concatnated_frame['Ending Timestamp'].apply(lambda x: pd.to_datetime(x, unit='s'))
+    concatnated_frame = concatnated_frame.reset_index(drop = True)
+    
+    print('###################### Handling Overlapping Events ######################')
+
+    for i in range(int(len(concatnated_frame)/2)):
+        for i in tqdm(range(len(concatnated_frame)-1)):
+            try:
+                delta_a = concatnated_frame['Ending Timestamp'][i] - concatnated_frame['Starting Timestamp'][i]
+                delta_b = concatnated_frame['Ending Timestamp'][i+1] - concatnated_frame['Starting Timestamp'][i+1]
+                c1 = min(concatnated_frame['Starting Timestamp'][i], concatnated_frame['Starting Timestamp'][i+1])
+                c2 = max(concatnated_frame['Ending Timestamp'][i], concatnated_frame['Ending Timestamp'][i+1])
+                Dc = c2-c1
+                if ((delta_a+delta_b)>Dc):
+                    concatnated_frame['Starting Timestamp'][i] = c1
+                    concatnated_frame['Ending Timestamp'][i] = c2
+                    concatnated_frame = concatnated_frame.drop(concatnated_frame.index[i+1]).reset_index(drop=True)
+            except KeyError as error:
+                logging.info("index overflow handling exception")
+
+    print('###################### Handling smaller Events ######################')
+    
+    concatnated_frame['Starting Timestamp'] = concatnated_frame["Starting Timestamp"].apply(lambda x: pd.to_datetime(x, unit='s'))
+    concatnated_frame['Ending Timestamp'] = concatnated_frame['Ending Timestamp'].apply(lambda x: pd.to_datetime(x, unit='s'))
+                
+    for i in tqdm(range(int(len(concatnated_frame)/2))):
+        for i in range(len(concatnated_frame)-1):
+            try:
+                if (concatnated_frame['Starting Timestamp'][i+1] - concatnated_frame['Ending Timestamp'][i] < timedelta(minutes = 10)):
+                    concatnated_frame['Ending Timestamp'][i] = concatnated_frame['Ending Timestamp'][i+1]
+                    concatnated_frame = concatnated_frame.drop(concatnated_frame.index[i+1]).reset_index(drop=True)
+                    merged_smaller_events = concatnated_frame.copy()
+            except KeyError as error:
+                logging.info('ignore index overflow error')
+
+    return merged_smaller_events
 
 
 def stack_plot_results():
-    
-    # ema_df = pd.read_csv('L:/C O D E/UMBC VR Project/Stress_Detection/EMA_Survey/ema.csv')
-    # ema_df = ema_df.iloc[2: , :]
-    # ema_df.reset_index(inplace=True)
-
-    # date_range = []
-
-    # for i in range(len(ema_df)):
-    #     date_range.append(('Survey Start Time = ' + ema_df.StartDate[i], 'Survey End Time = ' + ema_df.EndDate[i], 'Break = ' + ema_df.Break[i],
-    #                     'Rushed = ' + ema_df.Rushed[i], 'Confront_Authority = '+ ema_df.Confront_authority[i],
-    #             'Rude_Family = ' + ema_df.Rude_family[i], 'Gen_Disrespect= ' + ema_df.gen_disrespect[i],
-    #             'COVID_concern= ' + ema_df.COVID_concern[i], 'Discomfort= ' + ema_df.Discomfort[i],
-    #             'Lack_support= ' + ema_df.Lack_support[i],   'Team_value= ' + ema_df.Team_value[i],
-    #             'Demands= ' + ema_df.Demands[i], 'Death= ' + ema_df.Death[i], 
-    #             'Other_work-stress= ' + ema_df['Other_work-stress'][i],  'Other_non-work-stress= ' + ema_df['Other_non-work-stress'][i] ))
-             
-    # Print_start_date_range = str(date_range[0]).replace("'", "")
-    # Print_end_date_range = str(date_range[1]).replace("'", "")  
-
-    # fig = plt.figure(figsize=(70,10))
-    # fig, ax2 = plt.subplots(figsize=(50,15)) 
-    # ax2 = fig.add_subplot(121)
-    
-            
-############################################################   EMA Survey Plot ################################################################
     ema_df = pd.read_csv('./EMA_Survey/ema.csv')
     ema_df = ema_df.iloc[2: , :]
     ema_df.reset_index(inplace=True)
@@ -674,13 +642,14 @@ def stack_plot_results():
     
     
     print('\n', '******************************* Preparing for combined chart ****************************************', '\n')
-    fig, axs = plt.subplots(nrows=5, sharex=True, subplot_kw=dict(
-        frameon=False), figsize=(30, 15))  # frameon=False removes frames
+    fig, axs = plt.subplots(nrows=7, sharex=True, subplot_kw=dict(frameon=False), figsize=(30, 15))  # frameon=False removes frames
     axs[0].grid()
     axs[1].grid()
     axs[2].grid()
     axs[3].grid()
     axs[4].grid()
+    axs[5].grid()
+    # axs[5].grid()
     
     plt.figtext(0.1, .95, forenoon_data, ha="left", fontsize=10, bbox={"facecolor":"orange", "alpha":2.0, "pad":10}, wrap= True)
     plt.figtext(0.1, .90, afternoon_data, ha="left", fontsize=10, bbox={"facecolor":"pink", "alpha":2.0, "pad":10},wrap = True)
@@ -696,47 +665,67 @@ def stack_plot_results():
                 color='r', label="EDA-Phasic")
     axs[4].plot(eda_tonic_df['datetime'], eda_tonic_df['MAG_K500'],
                 color='c', label="EDA-Tonic")
-
+    
+    
     for d in tqdm(hrv_events_df.index):
-        axs[0].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[1].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[2].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[3].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[4].axvspan(hrv_events_df['Starting Timestamp'][d],
-                       hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[2].axvspan(hrv_events_df['Starting Timestamp'][d], hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=0.5)
 
     for d in tqdm(acc_events_df.index):
-        axs[0].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[1].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[2].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[3].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[4].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        
+        axs[0].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="c", edgecolor="none", alpha=0.5)
 
     for d in tqdm(eda_phasic_events_df.index):
-        axs[0].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[1].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[2].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[3].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[4].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[3].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="b", edgecolor="none", alpha=0.5)
 
     for d in tqdm(eda_tonic_events_df.index):
-        axs[0].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[1].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[2].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[3].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[4].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[4].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="r", edgecolor="none", alpha=0.5)
 
     for d in tqdm(hr_events_df.index):
-        axs[0].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[1].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[2].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[3].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
-        axs[4].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        axs[1].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="violet", edgecolor="none", alpha=0.5)
+
+    for d in tqdm(merged_smaller_events.index):
+        axs[5].axvspan(merged_smaller_events['Starting Timestamp'][d], merged_smaller_events['Ending Timestamp'][d], facecolor = "grey", edgecolor='none', alpha = 0.5)
+        
+
+    # for d in tqdm(hrv_events_df.index):
+    #     axs[0].axvspan(hrv_events_df['Starting Timestamp'][d],
+    #                    hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[1].axvspan(hrv_events_df['Starting Timestamp'][d],
+    #                    hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[2].axvspan(hrv_events_df['Starting Timestamp'][d],
+    #                    hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[3].axvspan(hrv_events_df['Starting Timestamp'][d],
+    #                    hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[4].axvspan(hrv_events_df['Starting Timestamp'][d],
+    #                    hrv_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+
+    # for d in tqdm(acc_events_df.index):
+    #     axs[0].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[1].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[2].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[3].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[4].axvspan(acc_events_df['Starting Timestamp'][d], acc_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+        
+
+    # for d in tqdm(eda_phasic_events_df.index):
+    #     axs[0].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[1].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[2].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[3].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[4].axvspan(eda_phasic_events_df['Starting Timestamp'][d], eda_phasic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+
+    # for d in tqdm(eda_tonic_events_df.index):
+    #     axs[0].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[1].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[2].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[3].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[4].axvspan(eda_tonic_events_df['Starting Timestamp'][d], eda_tonic_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+
+    # for d in tqdm(hr_events_df.index):
+    #     axs[0].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[1].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[2].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[3].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
+    #     axs[4].axvspan(hr_events_df['Starting Timestamp'][d], hr_events_df['Ending Timestamp'][d], facecolor="g", edgecolor="none", alpha=1)
 
 
 #gbrcm 
@@ -749,12 +738,21 @@ def stack_plot_results():
         
 
     import matplotlib.dates as mdates
-    axs[4].xaxis.set_major_locator(mdates.MinuteLocator(interval=20))   #to get a tick every 15 minutes
-    axs[4].xaxis.set_major_formatter(mdates.DateFormatter('%I:%M %p'))
+    axs[5].xaxis.set_major_locator(mdates.MinuteLocator(interval=20))   #to get a tick every 15 minutes
+    axs[5].xaxis.set_major_formatter(mdates.DateFormatter('%I:%M %p'))
     plt.gcf().autofmt_xdate()
     
-    fig.savefig('./Stacked_charts/Stressful_Regions.png')
-    # ("./Metadata/"+ dir+"_HRV.csv")
+    
+    # bbox=[0, 0, 1, 1]
+    axs[6].axis('off')
+    mpl_table = axs[6].table(cellText = merged_smaller_events.values, rowLabels = merged_smaller_events.index, colLabels = merged_smaller_events.columns)
+    mpl_table.auto_set_font_size(True)
+    # mpl_table.set_fontsize(font_size)
+    mpl_table.scale(1, 4)
+    
+    # plt.show()
+    
+    fig.savefig('./Stressful_Regionsss.png')
 
 
 Extract_HRV_Information()
@@ -762,6 +760,7 @@ Extract_ACC_Infromation()
 Extract_GSR_Phasic_Information()
 Extract_GSR_Tonic_Information()
 Extract_Heart_Rate_Features()
+handle_overlapping_timestamps()
 stack_plot_results()
 
 
