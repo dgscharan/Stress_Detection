@@ -544,8 +544,8 @@ def stack_plot_results():
     afternoon_ema_df = ema_df.iloc[[1], :]
 
     forenoon_data = []
-    forenoon_data.append('Start Time = ' + str(forenoon_ema_df['StartDate'].values))
-    forenoon_data.append('End Time = '+  str(forenoon_ema_df['EndDate'].values))
+    forenoon_data.append('Start Time = ' + str((pd.to_datetime(forenoon_ema_df['StartDate']).dt.strftime("%m/%d/%Y, %I:%M:%S %p").values)))
+    forenoon_data.append('End Time = ' +  str((pd.to_datetime(forenoon_ema_df['EndDate']).dt.strftime("%m/%d/%Y, %I:%M:%S %p").values)))
 
     if (int(forenoon_ema_df['Break'].values)) > 0 and (int(forenoon_ema_df['Break'].values)) < 8:
         forenoon_data.append('Break = ' + (str(forenoon_ema_df['Break'].values)))
@@ -613,8 +613,8 @@ def stack_plot_results():
         pass
 
     afternoon_data = []
-    afternoon_data.append('Start Time = ' + str(afternoon_ema_df['StartDate'].values))
-    afternoon_data.append('End Time = '+  str(afternoon_ema_df['EndDate'].values))
+    afternoon_data.append('Start Time = ' + str((pd.to_datetime(afternoon_ema_df['StartDate']).dt.strftime("%m/%d/%Y, %I:%M:%S %p").values)))
+    afternoon_data.append('End Time = '+  str((pd.to_datetime(afternoon_ema_df['StartDate']).dt.strftime("%m/%d/%Y, %I:%M:%S %p").values)))
 
     if (int(afternoon_ema_df['Break'].values)) > 0 and (int(afternoon_ema_df['Break'].values)) < 8:
         afternoon_data.append('Break = ' + (str(afternoon_ema_df['Break'].values)))
@@ -705,7 +705,6 @@ def stack_plot_results():
     axs[3].grid()
     axs[4].grid()
     axs[5].grid()
-    # axs[5].grid()
     
     plt.figtext(0.1, .95, forenoon_data, ha="left", fontsize=10, bbox={"facecolor":"orange", "alpha":2.0, "pad":10}, wrap= True)
     plt.figtext(0.1, .90, afternoon_data, ha="left", fontsize=10, bbox={"facecolor":"pink", "alpha":2.0, "pad":10},wrap = True)
@@ -757,12 +756,12 @@ def stack_plot_results():
     for i in range(6):
         axs[i].legend(loc="upper right")
   
-    axs[5].xaxis.set_major_locator(mdates.MinuteLocator(interval=20))   #to get a tick every 15 minutes
+    axs[5].xaxis.set_major_locator(mdates.MinuteLocator(interval=20))   #to get a tick every 20 minutes
     axs[5].xaxis.set_major_formatter(mdates.DateFormatter('%I:%M %p'))
     plt.gcf().autofmt_xdate()
 
     # plt.show() 
-    fig.savefig('./9999_Mar_30_2022.jpg', bbox_inches='tight')
+    fig.savefig('./99999_April_1_2022.jpg', bbox_inches='tight')
 
 
 Extract_HRV_Information()
